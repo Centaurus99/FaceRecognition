@@ -18,6 +18,7 @@ import multiprocessing as mp
 
 EPS = 0.35
 Textsize = 10
+Rate = 4
 
 def face_distance_to_conf(face_distance, face_match_threshold=EPS):
     if face_distance > face_match_threshold:
@@ -29,44 +30,43 @@ def face_distance_to_conf(face_distance, face_match_threshold=EPS):
         linear_val = 1.0 - (face_distance / (range * 2.0))
         return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
 
-def Recognize(all_face_encodings, res):
-    print('t-2')
-    video_capture = cv2.VideoCapture(0)
-    ret, frame = video_capture.read()
-    print('t-1')
-    # Resize frame of video to 1/4 size for faster face recognition processing
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+def Recognize(all_face_encodings, res, is_run, pic, wh):
+    while True:
+        while is_run[wh] == False:
+            time.sleep(0.01)
+        print('t-2')
 
-    print('t0')
-    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-    rgb_small_frame = small_frame[:, :, ::-1]
+        print('t0')
+        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+        rgb_small_frame = pic[wh][:, :, ::-1]
 
-    print('t1')
-    # Grab the list of names and the list of encodings
-    known_face_names = list(all_face_encodings.keys())
-    known_face_encodings = np.array(list(all_face_encodings.values()))
+        print('t1')
+        # Grab the list of names and the list of encodings
+        known_face_names = list(all_face_encodings.keys())
+        known_face_encodings = np.array(list(all_face_encodings.values()))
 
-    print('t2')
-    # Find all the faces and face encodings in the unknown image
-    face_locations = face_recognition.face_locations(unknown_image)
-    face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
+        print('t2')
+        # Find all the faces and face encodings in the unknown image
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
-    print('t3')
-    # Loop through each face found in the unknown image
-    for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-        # See if the face is a match for the known face(s)
-        name = 'Unknown'
+        print('t3')
+        # Loop through each face found in the unknown image
+        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+            # See if the face is a match for the known face(s)
+            name = 'Unknown'
 
-        face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-        best_match_index = np.argmin(face_distances)
-        if face_distances[best_match_index] < EPS:
-            name = known_face_names[best_match_index]
-        if name == 'Unknown':
-            name += '(' + str(round(face_distance_to_conf(face_distances[best_match_index])*100,1)) + '%' + known_face_names[best_match_index] + ')'
-        else:
-            name += '(' + str(round(face_distance_to_conf(face_distances[best_match_index])*100,1)) + '%)'
-        res.append(((top, right, bottom, left),name))
-    print('t4')
+            face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+            best_match_index = np.argmin(face_distances)
+            if face_distances[best_match_index] < EPS:
+                name = known_face_names[best_match_index]
+            if name == 'Unknown':
+                name += '(' + str(round(face_distance_to_conf(face_distances[best_match_index])*100,1)) + '%' + known_face_names[best_match_index] + ')'
+            else:
+                name += '(' + str(round(face_distance_to_conf(face_distances[best_match_index])*100,1)) + '%)'
+            res[wh].append(((top, right, bottom, left),name))
+        print('t4')
+        is_run[wh] = False
 
 
 if __name__ =='__main__':
@@ -80,28 +80,30 @@ if __name__ =='__main__':
 
     print('All ' + str(len(all_face_encodings)) + ' peoples')
 
-    # Get a reference to webcam #0 (the default one)
-    video_capture = cv2.VideoCapture(0)
-
     # Initialize some variables
 
     CPU_NUM = max(mp.cpu_count() - 1, 1)
     which = []
-    res = []
-    is_run = []
+    res = mgr.list()
+    is_run = mgr.list()
     process = []
-    pic = []
+    pic = mgr.list()
 
     for i in range(0,CPU_NUM):
-        which.append(None)
-        res.append(None)
-        is_run.append(False)
-        process.append(None)
+        which.append(0)
+        res.append([])
         pic.append(None)
-        
+        is_run.append(False)
+        process.append(mp.Process(target = Recognize, args = (all_face_encodings, res, is_run, pic, i)))
+        process[i].start()
+    time.sleep(5)
+
     nowT = 0
     mxT = 0
     faces_data = []
+    
+    # Get a reference to webcam #0 (the default one)
+    video_capture = cv2.VideoCapture(0)
     while True:
         nowT += 1
         # Grab a single frame of video
@@ -111,27 +113,22 @@ if __name__ =='__main__':
         for i in range(0,CPU_NUM):
             if is_run[i] == False:
                 tag = i
-                continue
-            if process[i].is_alive() == False:
-                is_run[i] = False
-                tag = i
                 if which[i] > mxT:
                     mxT = which[i]
                     faces_data = res[i]
-        
+        '''
         print('-------' + str(nowT))
         print(which)
         print(res)
         print(is_run)
-        print(process)
-        print(tag)
-        
+        '''
         if tag != -1:
+            # Resize frame of video to 1/4 size for faster face recognition processing
+            small_frame = cv2.resize(frame, (0, 0), fx=1/Rate, fy=1/Rate)
+            pic[tag] = small_frame
             which[tag] = nowT
             res[tag] = mgr.list()
             is_run[tag] = True
-            process[tag] = mp.Process(target = Recognize, args = (all_face_encodings, res[tag]))
-            process[tag].start()
         
         
         print(faces_data)
@@ -140,11 +137,12 @@ if __name__ =='__main__':
         draw = ImageDraw.Draw(pil_image)
         # Display the results
         for (top, right, bottom, left), name in faces_data:
+            print(name)
             # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-            top *= 4
-            right *= 4
-            bottom *= 4
-            left *= 4
+            top *= Rate
+            right *= Rate
+            bottom *= Rate
+            left *= Rate
 
             # Draw a box around the face using the Pillow module
             draw.rectangle(((left, top), (right, bottom)), outline=(40, 42, 54))
@@ -171,7 +169,6 @@ if __name__ =='__main__':
         # Remove the drawing library from memory as per the Pillow docs
         del draw
         res_image = Image.blend(pil_image_copy, pil_image, 0.7)
-        #print(res_image.mode,res_image.size)
 
         frame = cv2.cvtColor(np.asarray(res_image),cv2.COLOR_BGR2RGB)
 
@@ -179,7 +176,7 @@ if __name__ =='__main__':
         cv2.imshow('Video', frame)
 
         # Hit 'q' on the keyboard to quit!
-        if cv2.waitKey(2) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     # Release handle to the webcam
