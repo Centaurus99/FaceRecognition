@@ -5,30 +5,13 @@ import pickle
 import math
 import os
 import re
+import multiprocessing as mp
 
 EPS = 0.35
-# Load face encodings
-with open('faces.dat', 'rb') as f:
-	all_face_encodings = pickle.load(f)
-
-# Grab the list of names and the list of encodings
-known_face_names = list(all_face_encodings.keys())
-known_face_encodings = np.array(list(all_face_encodings.values()))
-print('All ' + str(len(known_face_names)) + ' peoples')
-
-
-IMAGE_PATH = '2/'
-paths = []
-for dirpath, dirnames, filenames in os.walk(IMAGE_PATH):
-    for filepath in filenames:
-        image_name=filepath.lower()
-        match_obj = re.match(r'(?!.*with_boxes\.jpg)(.*\.jpg)',image_name)
-        if match_obj:
-            paths.append(os.path.join(dirpath, image_name))
-
-paths.sort()
 Textsize = 10
-print('All ' + str(len(paths)) + ' photos')
+
+def Bar(args):
+    print(args)
 
 def face_distance_to_conf(face_distance, face_match_threshold=EPS):
     if face_distance > face_match_threshold:
@@ -40,9 +23,7 @@ def face_distance_to_conf(face_distance, face_match_threshold=EPS):
         linear_val = 1.0 - (face_distance / (range * 2.0))
         return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
 
-for photo in paths:
-    print('--------' + photo)
-
+def Rotate(photo):
     image=Image.open(photo)
     try:
         # Grab orientation value.
@@ -68,17 +49,20 @@ for photo in paths:
             image.save(photo, quality=95)
     except:
         pass
-    
+
+def Recognize(photo,all_face_encodings):
+    print('Processing:' + photo)
+    Rotate(photo)
+
+    # Grab the list of names and the list of encodings
+    known_face_names = list(all_face_encodings.keys())
+    known_face_encodings = np.array(list(all_face_encodings.values()))
+
     # Load an image with an unknown face
     unknown_image = face_recognition.load_image_file(photo)
-    
     # Find all the faces and face encodings in the unknown image
     face_locations = face_recognition.face_locations(unknown_image)
     face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
-    print(face_locations)
-    print(face_encodings)
-    print(known_face_encodings)
-    print(photo[len(IMAGE_PATH):] + ' encoding complete')
 
     # Create a Pillow ImageDraw Draw instance to draw with
     pil_image = Image.fromarray(unknown_image)
@@ -119,11 +103,42 @@ for photo in paths:
         draw.rectangle(((left, bottom - text_height - 6), (max(right, left + text_width + 6), bottom)), fill=(40, 42, 54), outline=(40, 42, 54))
         draw.text((left + 3, bottom - text_height - 3), name, fill=(255, 255, 255), font=font)
 
-    print('OK ' + str(len(face_locations)) + ' faces')
-
     # Remove the drawing library from memory as per the Pillow docs
     del draw
     res_image = Image.blend(pil_image_copy, pil_image, 0.8)
-    print(res_image.mode,res_image.size)
-
     res_image.save(photo[0:len(photo)-4] + "_with_boxes.jpg", quality=95)
+
+    print('-----')
+    print('OK ' + str(len(face_locations)) + ' faces')
+    print(res_image.mode,res_image.size)
+    return '--------' + photo
+
+
+if __name__ =='__main__':
+    po = mp.Pool()
+    mgr = mp.Manager()
+    # Load face encodings
+    with open('faces.dat', 'rb') as f:
+        data_in = pickle.load(f)
+    all_face_encodings = mgr.dict()
+    for key in data_in:
+        all_face_encodings[key] = data_in[key]
+
+    print('All ' + str(len(all_face_encodings)) + ' peoples')
+
+    IMAGE_PATH = '2/'
+    paths = []
+    for dirpath, dirnames, filenames in os.walk(IMAGE_PATH):
+        for filepath in filenames:
+            image_name=filepath.lower()
+            match_obj = re.match(r'(?!.*with_boxes\.jpg)(.*\.jpg)',image_name)
+            if match_obj:
+                paths.append(os.path.join(dirpath, image_name))
+
+    paths.sort()
+    print('All ' + str(len(paths)) + ' photos')
+
+    for photo in paths:
+        po.apply_async(func = Recognize, args = (photo,all_face_encodings),callback = Bar)
+    po.close()
+    po.join()

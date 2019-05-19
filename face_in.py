@@ -4,9 +4,6 @@ import os
 import pickle
 import multiprocessing as mp
 
-IMAGE_PATH = '1/'
-paths = glob.glob(os.path.join(IMAGE_PATH, '*.jpg'))
-paths.sort()
 
 def ImageIn(face_DATA, i):
     photo = face_recognition.load_image_file(i)
@@ -22,6 +19,10 @@ def Bar(args):
     print(args)
 
 if __name__ =='__main__':
+    IMAGE_PATH = '1/'
+    paths = glob.glob(os.path.join(IMAGE_PATH, '*.jpg'))
+    paths.sort()
+    
     po = mp.Pool()
     mgr = mp.Manager()
     face_DATA = mgr.dict()
