@@ -18,8 +18,6 @@ print('All ' + str(len(known_face_names)) + ' peoples')
 
 
 IMAGE_PATH = '2/'
-root = "/Users/hutingting/Desktop/name"
-targetDir='/Users/hutingting/Desktop/result'
 paths = []
 for dirpath, dirnames, filenames in os.walk(IMAGE_PATH):
     for filepath in filenames:
@@ -51,8 +49,6 @@ for photo in paths:
         image_exif = image._getexif()
         image_orientation = image_exif[274]
         # Rotate depending on orientation.
-        if 2 <= image_orientation and image_orientation <= 8:
-            print('Rotate!')
         if image_orientation == 2:
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
         if image_orientation == 3:
@@ -67,7 +63,9 @@ for photo in paths:
             image = image.transpose(Image.FLIP_TOP_BOTTOM).transpose(Image.ROTATE_90)
         if image_orientation == 8:
             image = image.transpose(Image.ROTATE_90)
-        image.save(photo)
+        if 2 <= image_orientation and image_orientation <= 8:
+            print('Rotate!')
+            image.save(photo, quality=95)
     except:
         pass
     
@@ -77,7 +75,10 @@ for photo in paths:
     # Find all the faces and face encodings in the unknown image
     face_locations = face_recognition.face_locations(unknown_image)
     face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
-    print(photo[len(IMAGE_PATH)] + ' encoding complete')
+    print(face_locations)
+    print(face_encodings)
+    print(known_face_encodings)
+    print(photo[len(IMAGE_PATH):] + ' encoding complete')
 
     # Create a Pillow ImageDraw Draw instance to draw with
     pil_image = Image.fromarray(unknown_image)
@@ -125,4 +126,4 @@ for photo in paths:
     res_image = Image.blend(pil_image_copy, pil_image, 0.8)
     print(res_image.mode,res_image.size)
 
-    res_image.save(photo[0:len(photo)-4] + "_with_boxes.jpg")
+    res_image.save(photo[0:len(photo)-4] + "_with_boxes.jpg", quality=95)

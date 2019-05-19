@@ -2,24 +2,37 @@ import face_recognition
 import glob
 import os
 import pickle
+import multiprocessing as mp
 
 IMAGE_PATH = '1/'
 paths = glob.glob(os.path.join(IMAGE_PATH, '*.jpg'))
 paths.sort()
-known_face_encodings = []
-known_face_real_names = []
-for i in paths:
+
+def ImageIn(face_DATA, i):
     photo = face_recognition.load_image_file(i)
-    print(i[len(IMAGE_PATH):len(i)-4])
-    face_encoding = face_recognition.face_encodings(photo,num_jitters = 200)[0]
-    known_face_encodings.append(face_encoding)
-    known_face_real_names.append(i[len(IMAGE_PATH):len(i)-4])
-print('All ' + str(len(known_face_encodings)) + ' peoples')
+    name = i[len(IMAGE_PATH):len(i)-4]
+    face_locations = face_recognition.face_locations(photo)
+    if (len(face_locations) != 1):
+        return 'The number of faces is ' + str(len(face_locations)) + ' but not 1'
+    face_encoding = face_recognition.face_encodings(photo, face_locations, num_jitters = 1)[0]
+    face_DATA[name] = face_encoding
+    return name
 
-face_DATA = {}
-for i in range(0,len(known_face_encodings)):
-    face_DATA[known_face_real_names[i]] = known_face_encodings[i]
-with open('faces.dat', 'wb') as f:
-    pickle.dump(face_DATA, f)
+def Bar(args):
+    print(args)
 
-print('SAVE OK')
+if __name__ =='__main__':
+    po = mp.Pool()
+    mgr = mp.Manager()
+    face_DATA = mgr.dict()
+    print('Start!')
+    for i in paths:
+        po.apply_async(func = ImageIn, args = (face_DATA, i),callback = Bar)
+    po.close()
+    po.join()
+
+    print('All ' + str(len(face_DATA)) + ' peoples')
+    out_Data = face_DATA.copy()
+    with open('faces.dat', 'wb') as f:
+        pickle.dump(out_Data, f)
+    print('SAVE OK')
