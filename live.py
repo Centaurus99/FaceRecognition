@@ -30,6 +30,14 @@ def face_distance_to_conf(face_distance, face_match_threshold=EPS):
         return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
 
 def Recognize(unknown_image, all_face_encodings, res):
+    
+    ret, frame = video_capture.read()
+    # Resize frame of video to 1/4 size for faster face recognition processing
+    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+
+    # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+    rgb_small_frame = small_frame[:, :, ::-1]
+
     print('t1')
     # Grab the list of names and the list of encodings
     known_face_names = list(all_face_encodings.keys())
@@ -57,6 +65,7 @@ def Recognize(unknown_image, all_face_encodings, res):
         res.append(((top, right, bottom, left),name))
     print('t4')
 
+
 if __name__ =='__main__':
     mgr = mp.Manager()
     # Load face encodings
@@ -78,12 +87,14 @@ if __name__ =='__main__':
     res = []
     is_run = []
     process = []
+    pic = []
 
     for i in range(0,CPU_NUM):
         which.append(None)
         res.append(None)
         is_run.append(False)
         process.append(None)
+        pic.append(None)
         
     nowT = 0
     mxT = 0
@@ -115,16 +126,8 @@ if __name__ =='__main__':
             which[tag] = nowT
             res[tag] = mgr.list()
             is_run[tag] = True
-            # Resize frame of video to 1/4 size for faster face recognition processing
-            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-
-            # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-            rgb_small_frame = small_frame[:, :, ::-1]
-
-            print('-----')
-            process[tag] = mp.Process(target = Recognize, args = (rgb_small_frame, all_face_encodings, res[tag]))
+            process[tag] = mp.Process(target = Recognize, args = (all_face_encodings, res[tag]))
             process[tag].start()
-            print('---------')
         
         
         print(faces_data)
@@ -172,7 +175,7 @@ if __name__ =='__main__':
         cv2.imshow('Video', frame)
 
         # Hit 'q' on the keyboard to quit!
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(2) & 0xFF == ord('q'):
             break
 
     # Release handle to the webcam
