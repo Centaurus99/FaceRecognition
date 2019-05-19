@@ -29,12 +29,15 @@ def face_distance_to_conf(face_distance, face_match_threshold=EPS):
         linear_val = 1.0 - (face_distance / (range * 2.0))
         return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
 
-def Recognize(unknown_image, all_face_encodings, res):
-    
+def Recognize(all_face_encodings, res):
+    print('t-2')
+    video_capture = cv2.VideoCapture(0)
     ret, frame = video_capture.read()
+    print('t-1')
     # Resize frame of video to 1/4 size for faster face recognition processing
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
 
+    print('t0')
     # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
     rgb_small_frame = small_frame[:, :, ::-1]
 
@@ -115,6 +118,7 @@ if __name__ =='__main__':
                 if which[i] > mxT:
                     mxT = which[i]
                     faces_data = res[i]
+        
         print('-------' + str(nowT))
         print(which)
         print(res)
