@@ -11,7 +11,7 @@ def ImageIn(face_DATA, i):
     face_locations = face_recognition.face_locations(photo)
     if (len(face_locations) != 1):
         return 'The number of faces is ' + str(len(face_locations)) + ' but not 1'
-    face_encoding = face_recognition.face_encodings(photo, face_locations, num_jitters = 1)[0]
+    face_encoding = face_recognition.face_encodings(photo, face_locations, num_jitters = 200)[0]
     face_DATA[name] = face_encoding
     return name
 
