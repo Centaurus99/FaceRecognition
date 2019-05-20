@@ -19,8 +19,12 @@ import math
 
 EPS = 0.35
 Textsize = 10
-Rate = 4
+Rate = 1
 RecoInterval = 0.5
+EXT_PHOTO_PATH = 'data/'
+
+def cv_imwrite(out_path, img_np):
+    cv2.imencode('.jpg', img_np, [int(cv2.IMWRITE_JPEG_QUALITY),95])[1].tofile(EXT_PHOTO_PATH + out_path)
 
 def face_distance_to_conf(face_distance, face_match_threshold=EPS):
     if face_distance > face_match_threshold:
@@ -77,6 +81,10 @@ def Recognize(all_face_encodings, res, is_run, pic, wh):
 
 
 if __name__ =='__main__':
+    
+    if not os.path.isdir(EXT_PHOTO_PATH):
+        os.makedirs(EXT_PHOTO_PATH)
+
     mgr = mp.Manager()
     # Load face encodings
     with open('faces.dat', 'rb') as f:
@@ -187,13 +195,28 @@ if __name__ =='__main__':
         del draw
         res_image = Image.blend(pil_image_copy, pil_image, 0.7)
 
+        key = cv2.waitKey(1) & 0xFF
+        if  key == ord('p'):
+            for (top, right, bottom, left), name in faces_data:
+                top *= Rate
+                right *= Rate
+                bottom *= Rate
+                left *= Rate
+                top = max(0, top - 20)
+                left = max(0, left - 20)
+                bottom = min(frame.shape[0], bottom + 20)
+                right = min(frame.shape[1], right + 20)
+                pht = frame[top:bottom, left:right]
+                cv_imwrite(name + '.jpg', pht)
+                print(name + '.jpg saved')
+        
         frame = cv2.cvtColor(np.asarray(res_image),cv2.COLOR_BGR2RGB)
 
         # Display the resulting image
         cv2.imshow('Video', frame)
 
         # Hit 'q' on the keyboard to quit!
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if  key == ord('q'):
             break
 
     # Release handle to the webcam
