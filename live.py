@@ -17,7 +17,7 @@ import math
 # OpenCV is *not* required to use the face_recognition library. It's only required if you want to run this
 # specific demo. If you have trouble installing it, try any of the other demos that don't require it instead.
 
-EPS = 0.35
+EPS = 0.45
 Textsize = 10
 Rate = 1
 RecoInterval = 0.5
