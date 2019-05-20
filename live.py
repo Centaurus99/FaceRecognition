@@ -102,6 +102,7 @@ if __name__ =='__main__':
         pic.append(None)
         is_run.append(False)
         process.append(mp.Process(target = Recognize, args = (all_face_encodings, res, is_run, pic, i)))
+        process[i].daemon = True
         process[i].start()
     time.sleep(2)
 
