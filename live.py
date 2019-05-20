@@ -60,7 +60,6 @@ def Recognize(all_face_encodings, res, is_run, pic, wh):
                 name += '(' + str(round(face_distance_to_conf(face_distances[best_match_index])*100,1)) + '%' + known_face_names[best_match_index] + ')'
             else:
                 name += '(' + str(round(face_distance_to_conf(face_distances[best_match_index])*100,1)) + '%)'
-            print(name)
             res[wh].append(((top, right, bottom, left),name))
         is_run[wh] = False
 
@@ -111,6 +110,7 @@ if __name__ =='__main__':
                 tag = i
                 if which[i] > mxT:
                     mxT = which[i]
+                    print(str(nowT) + ':' + str(which[i]))
                     faces_data = res[i]
                 which[i] = 0
         
@@ -120,7 +120,7 @@ if __name__ =='__main__':
         print(res)
         print(is_run)
         '''
-        
+
         if nowT%Inversal == 0 and tag != -1:
             # Resize frame of video to 1/4 size for faster face recognition processing
             small_frame = cv2.resize(frame, (0, 0), fx=1/Rate, fy=1/Rate)
