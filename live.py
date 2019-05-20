@@ -19,7 +19,7 @@ import math
 
 EPS = 0.35
 Textsize = 10
-Rate = 1
+Rate = 4
 RecoInterval = 0.5
 
 def face_distance_to_conf(face_distance, face_match_threshold=EPS):
