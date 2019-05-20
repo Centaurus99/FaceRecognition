@@ -6,6 +6,7 @@ import pickle
 import time
 import os
 import multiprocessing as mp
+import math
 
 # This is a demo of running face recognition on live video from your webcam. It's a little more complicated than the
 # other example, but it includes some basic performance tweaks to make things run a lot faster:
@@ -18,8 +19,8 @@ import multiprocessing as mp
 
 EPS = 0.35
 Textsize = 10
-Rate = 4
-Inversal = 5
+Rate = 1
+RecoInterval = 0.5
 
 def face_distance_to_conf(face_distance, face_match_threshold=EPS):
     if face_distance > face_match_threshold:
@@ -43,9 +44,20 @@ def Recognize(all_face_encodings, res, is_run, pic, wh):
         known_face_names = list(all_face_encodings.keys())
         known_face_encodings = np.array(list(all_face_encodings.values()))
 
+        #t1 = time.process_time()
+
         # Find all the faces and face encodings in the unknown image
         face_locations = face_recognition.face_locations(rgb_small_frame)
+
+        #t2 = time.process_time() - t1
+        #print(str(wh) + '-1:' + str(t2))
+        
+        #t1 = time.process_time()
+
         face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        #t2 = time.process_time() - t1
+        #print(str(wh) + '-2:' + str(t2))
 
         # Loop through each face found in the unknown image
         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
@@ -99,21 +111,30 @@ if __name__ =='__main__':
     
     # Get a reference to webcam #0 (the default one)
     video_capture = cv2.VideoCapture(0)
+    fps =video_capture.get(cv2.CAP_PROP_FPS)
+    print('fps: ' + str(fps))
+    Inversal = math.floor(fps*RecoInterval)
+    print('Inversal: ' + str(Inversal))
+    fps = math.floor(fps)
     while True:
         nowT += 1
         # Grab a single frame of video
         ret, frame = video_capture.read()
         tag = -1
-        
+        run_sums = 0
         for i in range(0,CPU_NUM):
             if is_run[i] == False:
                 tag = i
                 if which[i] > mxT:
                     mxT = which[i]
-                    print(str(nowT) + ':' + str(which[i]))
                     faces_data = res[i]
+                    print('[faces: ' + str(len(faces_data)) + ', delay: ' + str(nowT-which[i]) + ']')
                 which[i] = 0
+            else:
+                run_sums += 1
         
+        if nowT % (fps*5) == 0:
+            print('----------Queueing: ' + str(run_sums) + '/' + str(CPU_NUM))
         '''
         print('-------' + str(nowT))
         print(which)
@@ -160,8 +181,6 @@ if __name__ =='__main__':
                 left -= (left + text_width + 6 - right) // 2
             draw.rectangle(((left, bottom - text_height - 6), (max(right, left + text_width + 6), bottom)), fill=(40, 42, 54), outline=(40, 42, 54))
             draw.text((left + 3, bottom - text_height - 3), name, fill=(255, 255, 255), font=font)
-
-        #print('OK ' + str(len(face_locations)) + ' faces')
 
         # Remove the drawing library from memory as per the Pillow docs
         del draw
