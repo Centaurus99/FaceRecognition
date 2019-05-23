@@ -17,7 +17,7 @@ import math
 # OpenCV is *not* required to use the face_recognition library. It's only required if you want to run this
 # specific demo. If you have trouble installing it, try any of the other demos that don't require it instead.
 
-EPS = 0.45
+EPS = 0.40
 Textsize = 10
 Rate = 1
 RecoInterval = 0.5
@@ -125,12 +125,12 @@ if __name__ =='__main__':
     Inversal = math.floor(fps*RecoInterval)
     print('Inversal: ' + str(Inversal))
     fps = math.floor(fps)
+    run_sums = 0
     while True:
         nowT += 1
         # Grab a single frame of video
         ret, frame = video_capture.read()
         tag = -1
-        run_sums = 0
         for i in range(0,CPU_NUM):
             if is_run[i] == False:
                 tag = i
@@ -142,8 +142,10 @@ if __name__ =='__main__':
             else:
                 run_sums += 1
         
-        if nowT % (fps*5) == 0:
-            print('----------Queueing: ' + str(run_sums) + '/' + str(CPU_NUM))
+        if nowT % (fps * 5) == 0:
+            print('----------Queueing: ' + str(round(run_sums / (fps * 5), 2)) + '/' + str(CPU_NUM))
+            run_sums = 0
+
         '''
         print('-------' + str(nowT))
         print(which)
